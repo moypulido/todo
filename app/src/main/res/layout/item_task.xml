@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Ícono de la categoría -->
+        <ImageView
+            android:id="@+id/categoryIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="16dp"
+            android:tint="@color/black"
+            android:src="@drawable/ic_category_default"
+            android:contentDescription="Categoría"/>
+
+        <!-- Contenedor de la información -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_weight="1">
+
+            <TextView
+                style="@style/TextTitle"
+                android:id="@+id/taskTitle"
+                android:layout_marginTop="0dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Título de la tarea"
+                android:textSize="18sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                style="@style/TextLabel"
+                android:id="@+id/taskDescription"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Descripción corta de la tarea"
+                android:textSize="14sp"
+                android:maxLines="2"
+                android:ellipsize="end"/>
+
+            <TextView
+                style="@style/TextNormal"
+                android:id="@+id/taskDueDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fecha de vencimiento: 10/03/2024"
+                android:textSize="14sp"
+                android:textColor="#757575"/>
+
+            <TextView
+                style="@style/TextTitle"
+                android:id="@+id/taskPriority"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="0dp"
+                android:text="Prioridad: Alta"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- CheckBox para marcar como completada -->
+        <CheckBox
+            android:id="@+id/taskCompleted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""/>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">to-do</string>
+    <string name="title_home">Home</string>
+    <string name="title_newtask">Nueva Tarea</string>
+    <string name="title_settings">Configuración</string>
+
+    <string-array name="priority_array">
+        <item>Todas</item>
+        <item>Alta</item>
+        <item>Media</item>
+        <item>Baja</item>
+    </string-array>
+
+    <string name="category_work">Trabajo</string>
+    <string name="category_personal">Personal</string>
+    <string name="category_shopping">Compras</string>
+    <string name="category_health">Salud</string>
+    <string name="category_other">Otro</string>
+    <string name="nueva_tarea">Nueva Tarea</string>
+    <string name="t_tulo">Título</string>
+    <string name="t_tulo_de_la_tarea">Título de la tarea</string>
+    <string name="descripci_n">Descripción</string>
+    <string name="seleccionar_fecha_y_hora">Seleccionar Fecha y Hora</string>
+    <string name="categor_a">Categoría</string>
+    <string name="guardar_tarea">Guardar Tarea</string>
+    <string name="filtrar_por_prioridad">Filtrar por prioridad</string>
+
+</resources>
