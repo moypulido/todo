@@ -24,5 +24,18 @@
     <string name="categor_a">Categoría</string>
     <string name="guardar_tarea">Guardar Tarea</string>
     <string name="filtrar_por_prioridad">Filtrar por prioridad</string>
+    <string name="cancel_del_task">Cancelar</string>
+    <string name="delete_del_task">Eliminar</string>
+    <string name="confirm_del_task">¿Deseas eliminar la tarea?</string>
+    <string name="no_tasks_alert">No hay tareas!!</string>
+    <string name="category">Categoría</string>
+    <string name="title_task">Título de la tarea</string>
+    <string name="description_task">Descripción corta de la tarea</string>
+    <string name="expiration_task">Fecha de vencimiento: 10/03/2024</string>
+    <string name="priotiyy_task">Prioridad: Alta</string>
+    <string name="priority_new_task">Prioridad</string>
+    <string name="priority_new_task_high">Alta</string>
+    <string name="priority_new_task_medium">Media</string>
+    <string name="priority_new_task_low">Baja</string>
 
 </resources>

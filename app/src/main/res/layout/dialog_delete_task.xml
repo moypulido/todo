@@ -22,7 +22,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="Deseas eliminar la tarea?"
+            android:text="@string/confirm_del_task"
             android:textColor="@color/black" />
 
         <LinearLayout
@@ -41,13 +41,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="10dp"
                 android:backgroundTint="@color/black"
-                android:text="Cancelar" />
+                android:text="@string/cancel_del_task" />
 
             <Button
                 android:id="@+id/delete_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Eliminar" />
+                android:text="@string/delete_del_task" />
 
         </LinearLayout>
 

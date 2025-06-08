@@ -20,6 +20,7 @@ import com.example.to_do.data.model.Priority;
 import com.example.to_do.data.model.Task;
 import com.example.to_do.databinding.FragmentNewtaskBinding;
 import com.example.to_do.ui.newtask.model.TaskRepository;
+import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
@@ -75,10 +76,21 @@ public class NewTaskFragment extends Fragment {
         binding.selectDateTimeButton.setOnClickListener(v -> showDateTimePicker());
         binding.saveTaskButton.setOnClickListener(v -> saveTask());
     }
+
+    //Popuesta para no dejar seleccionar fechas anteriores a las del dia actual
     private void showDateTimePicker() {
-        // Crear selector de fecha (MaterialDatePicker)
+        // Obtener la fecha actual
+        Calendar today = Calendar.getInstance();
+
+        // Crear selector de fecha (MaterialDatePicker) con restricción de fechas pasadas
         MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Selecciona una fecha")
+                .setSelection(today.getTimeInMillis()) // Fecha seleccionada por defecto
+                .setCalendarConstraints(
+                        new CalendarConstraints.Builder()
+                                .setStart(today.getTimeInMillis()) // Fecha mínima: hoy
+                                .build()
+                )
                 .build();
 
         datePicker.addOnPositiveButtonClickListener(selection -> {
@@ -110,6 +122,9 @@ public class NewTaskFragment extends Fragment {
 
         datePicker.show(getParentFragmentManager(), "DATE_PICKER");
     }
+
+    //Hace una segunda validacion para que la fecha no sea anterior a la de hoy
+    //Se implementa el pop up
     private void saveTask() {
         String title = binding.titleInput.getText().toString().trim();
         String description = binding.descriptionInput.getText().toString().trim();
@@ -117,6 +132,15 @@ public class NewTaskFragment extends Fragment {
         if (title.isEmpty() || description.isEmpty() || selectedDate.isEmpty() || selectedTime.isEmpty()
                 || binding.priorityGroup.getCheckedRadioButtonId() == -1) {
             Toast.makeText(requireContext(), "Por favor, completa todos los campos", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Date dueDate = parseDateTime(selectedDate, selectedTime);
+        Date today = Calendar.getInstance().getTime();
+
+        // Validar que la fecha seleccionada no sea anterior a hoy
+        if (dueDate.before(today)) {
+            Toast.makeText(requireContext(), "La fecha seleccionada no puede ser anterior a hoy", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -134,8 +158,21 @@ public class NewTaskFragment extends Fragment {
 
         Category category = Category.values()[binding.categorySpinner.getSelectedItemPosition()];
 
-        Date dueDate = parseDateTime(selectedDate, selectedTime);
-
+        //logica de popup de confirmacion
+        new android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Confirmar")
+                .setMessage("¿Seguro de guardar tarea?")
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    // Confirmación: guardar la tarea
+                    saveTaskToRepository(title, description, dueDate, priority, category);
+                })
+                .setNegativeButton("No", (dialog, which) -> {
+                    // Cancelación: cerrar el diálogo
+                    dialog.dismiss();
+                })
+                .show();
+    }
+    private void saveTaskToRepository(String title, String description, Date dueDate, Priority priority, Category category) {
         // Carga la lista actual desde repositorio
         List<Task> currentTasks = taskRepository.getTasks();
 
@@ -167,6 +204,7 @@ public class NewTaskFragment extends Fragment {
 
         clearFields();
     }
+
 
     private Date parseDateTime(String date, String time) {
         SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());

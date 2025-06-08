@@ -40,6 +40,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         TextView taskPriority;
         CheckBox taskCompleted;
 
+
+
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             categoryIcon = itemView.findViewById(R.id.categoryIcon);
@@ -59,12 +61,16 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         return new TaskViewHolder(view);
     }
 
+
+    //Se incluye un ejemplo de toggle button que cambia el color del titulo de la tarea a rojo en caso de que se de click a la casilla para eliminarla
     @Override
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = taskListFiltered.get(position);
 
+        // Configurar el título
         holder.taskTitle.setText(task.getTitle());
 
+        // Configurar la visibilidad y los textos de los demás campos
         if (task.getDescription().isEmpty()) {
             holder.taskDescription.setVisibility(View.GONE);
             holder.taskPriority.setVisibility(View.GONE);
@@ -75,16 +81,31 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.taskDueDate.setText("Fecha de vencimiento: " + formatDate(task.getDueDate()));
         }
 
+        // Configurar el estado inicial de la casilla y el color del título
         holder.taskCompleted.setChecked(task.isCompleted());
+        holder.taskTitle.setTextColor(task.isCompleted() ?
+                holder.itemView.getContext().getResources().getColor(R.color.red) :
+                holder.itemView.getContext().getResources().getColor(R.color.black));
+
+        // Configurar el ícono de la categoría
         holder.categoryIcon.setImageResource(getCategoryIcon(task.getCategory()));
 
+        // Listener para cambiar el color del título al marcar/desmarcar
         holder.taskCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
             task.setCompleted(isChecked);
+
+            // Cambiar el color del título
+            holder.taskTitle.setTextColor(isChecked ?
+                    holder.itemView.getContext().getResources().getColor(R.color.red) :
+                    holder.itemView.getContext().getResources().getColor(R.color.black));
+
+            // Mostrar el cuadro de diálogo al marcar
             if (isChecked) {
                 showMessageDialog(position);
             }
         });
     }
+
 
     private void showMessageDialog(int position) {
         LayoutInflater inflater = fragment.getLayoutInflater();
@@ -146,4 +167,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 return R.drawable.ic_category_default;
         }
     }
+
+
+
 }
