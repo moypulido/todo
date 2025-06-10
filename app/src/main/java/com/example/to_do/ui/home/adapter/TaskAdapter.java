@@ -1,12 +1,19 @@
 package com.example.to_do.ui.home.adapter;
 
 
+import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.to_do.R;
@@ -77,7 +84,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.taskDueDate.setVisibility(View.GONE);
         } else {
             holder.taskDescription.setText(task.getDescription());
-            holder.taskPriority.setText("Prioridad: " + task.getPriority());
+            holder.taskPriority.setText("Prioridad: " + task.getPriorityText());
             holder.taskDueDate.setText("Fecha de vencimiento: " + formatDate(task.getDueDate()));
         }
 
@@ -102,9 +109,31 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             // Mostrar el cuadro de diálogo al marcar
             if (isChecked) {
                 showMessageDialog(position);
+                sendCompletedNotification(holder.itemView.getContext(), task.getTitle());
+
             }
         });
     }
+
+    private void sendCompletedNotification(Context context, String taskTitle) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "task_channel")
+                .setSmallIcon(R.drawable.ic_category_default) // Usa un ícono válido
+                .setContentTitle("Tarea completada")
+                .setContentText("Has completado: " + taskTitle)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+
+        // Pedir permiso si es Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            return; // no tiene permiso
+        }
+
+        notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+    }
+
 
 
     private void showMessageDialog(int position) {

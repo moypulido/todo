@@ -29,7 +29,6 @@ public class Task {
         this.category = category;
         this.isCompleted = isCompleted;
     }
-    // Constructor sin 'id' ni 'isCompleted', como si fuera el constructor por defecto en Kotlin usando sobrecarga
     public Task(
             String title,
             String description,
@@ -54,6 +53,20 @@ public class Task {
     public void setDescription(String description) { this.description = description; }
 
     public Priority getPriority() { return priority; }
+
+    public String getPriorityText() {
+        switch (priority) {
+            case HIGH:
+                return "Alta";
+            case MEDIUM:
+                return "Media";
+            case LOW:
+                return "Baja";
+            case OTHER:
+            default:
+                return "Otra";
+        }
+    }
 
     public void setPriority(Priority priority) { this.priority = priority; }
 
