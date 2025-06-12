@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,10 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import android.text.format.DateUtils;
+import java.text.SimpleDateFormat;
+import androidx.navigation.NavController;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.to_do.R;
@@ -22,6 +27,7 @@ import com.example.to_do.data.model.Category;
 import com.example.to_do.ui.home.view.HomeFragment;
 import com.example.to_do.ui.newtask.model.TaskRepository;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -33,12 +39,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     private final HomeFragment fragment;
     private final List<Task> taskListFiltered = new ArrayList<>();
     private final TaskRepository taskRepository;
-
     public TaskAdapter(HomeFragment fragment) {
         this.fragment = fragment;
         this.taskRepository = TaskRepository.getInstance(fragment.requireContext());
     }
-
     public static class TaskViewHolder extends RecyclerView.ViewHolder {
         ImageView categoryIcon;
         TextView taskTitle;
@@ -59,25 +63,22 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             taskCompleted = itemView.findViewById(R.id.taskCompleted);
         }
     }
-
     @NonNull
     @Override
     public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_task, parent, false);
+
         return new TaskViewHolder(view);
     }
-
-
-    //Se incluye un ejemplo de toggle button que cambia el color del titulo de la tarea a rojo en caso de que se de click a la casilla para eliminarla
     @Override
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = taskListFiltered.get(position);
 
-        // Configurar el título
+        holder.itemView.setOnClickListener(v -> editTask(task));
+
         holder.taskTitle.setText(task.getTitle());
 
-        // Configurar la visibilidad y los textos de los demás campos
         if (task.getDescription().isEmpty()) {
             holder.taskDescription.setVisibility(View.GONE);
             holder.taskPriority.setVisibility(View.GONE);
@@ -85,36 +86,61 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         } else {
             holder.taskDescription.setText(task.getDescription());
             holder.taskPriority.setText("Prioridad: " + task.getPriorityText());
-            holder.taskDueDate.setText("Fecha de vencimiento: " + formatDate(task.getDueDate()));
+
+            CharSequence relative = DateUtils.getRelativeTimeSpanString(
+                    task.getDueDate().getTime(),
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE
+            );
+            holder.taskDueDate.setText(relative);
+
+            if (task.getDueDate().before(new Date()) && !task.isCompleted()) {
+                holder.taskDueDate.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.red));
+            } else {
+                holder.taskDueDate.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.black));
+            }
+
+            holder.taskDueDate.setVisibility(View.VISIBLE);
         }
 
-        // Configurar el estado inicial de la casilla y el color del título
         holder.taskCompleted.setChecked(task.isCompleted());
-        holder.taskTitle.setTextColor(task.isCompleted() ?
-                holder.itemView.getContext().getResources().getColor(R.color.red) :
-                holder.itemView.getContext().getResources().getColor(R.color.black));
 
-        // Configurar el ícono de la categoría
         holder.categoryIcon.setImageResource(getCategoryIcon(task.getCategory()));
 
-        // Listener para cambiar el color del título al marcar/desmarcar
         holder.taskCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
             task.setCompleted(isChecked);
 
-            // Cambiar el color del título
-            holder.taskTitle.setTextColor(isChecked ?
-                    holder.itemView.getContext().getResources().getColor(R.color.red) :
-                    holder.itemView.getContext().getResources().getColor(R.color.black));
+            taskRepository.updateTask(task);
 
-            // Mostrar el cuadro de diálogo al marcar
             if (isChecked) {
-                showMessageDialog(position);
                 sendCompletedNotification(holder.itemView.getContext(), task.getTitle());
-
+                showMessageDialog(position);
             }
         });
-    }
 
+        holder.itemView.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(fragment.requireContext())
+                    .setTitle("Eliminar tarea")
+                    .setMessage("¿Seguro que deseas eliminar esta tarea?")
+                    .setPositiveButton("Sí", (dialog, which) -> {
+                        Task taskToDelete = taskListFiltered.get(holder.getAdapterPosition());
+
+                        taskListFiltered.remove(holder.getAdapterPosition());
+                        notifyItemRemoved(holder.getAdapterPosition());
+
+                        List<Task> allTasks = taskRepository.getTasks();
+
+                        allTasks.removeIf(t -> t.getId() == taskToDelete.getId());
+
+                        taskRepository.saveTasks(allTasks);
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+
+            return true; // Muy importante, indica que el evento fue manejado
+        });
+    }
     private void sendCompletedNotification(Context context, String taskTitle) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "task_channel")
                 .setSmallIcon(R.drawable.ic_category_default) // Usa un ícono válido
@@ -124,18 +150,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
 
-        // Pedir permiso si es Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                         != PackageManager.PERMISSION_GRANTED) {
-            return; // no tiene permiso
+            return;
         }
 
         notificationManager.notify((int) System.currentTimeMillis(), builder.build());
     }
-
-
-
     private void showMessageDialog(int position) {
         LayoutInflater inflater = fragment.getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_delete_task, null);
@@ -164,23 +186,21 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         });
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
+
     }
     public void submitList(List<Task> filteredTasks) {
         taskListFiltered.clear();
         taskListFiltered.addAll(filteredTasks);
         notifyDataSetChanged();
     }
-
     @Override
     public int getItemCount() {
         return taskListFiltered.size();
     }
-
     private String formatDate(Date date) {
         SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
         return format.format(date);
     }
-
     private int getCategoryIcon(Category category) {
         switch (category) {
             case WORK:
@@ -196,7 +216,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 return R.drawable.ic_category_default;
         }
     }
-
-
-
+    public void editTask(Task task) {
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("task_to_edit", task);
+        NavController navController = NavHostFragment.findNavController(fragment);
+        navController.navigate(R.id.action_navigation_home_to_navigation_dashboard, bundle);
+    }
 }

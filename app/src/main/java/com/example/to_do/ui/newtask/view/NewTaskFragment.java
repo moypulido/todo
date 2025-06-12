@@ -1,20 +1,22 @@
 package com.example.to_do.ui.newtask.view;
 
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-
-import com.example.to_do.MainActivity;
 import com.example.to_do.R;
+import com.example.to_do.broadcast.TaskAlarmReceiver;
 import com.example.to_do.data.model.Category;
 import com.example.to_do.data.model.Priority;
 import com.example.to_do.data.model.Task;
@@ -24,13 +26,12 @@ import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
-
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 
 public class NewTaskFragment extends Fragment {
 
@@ -39,6 +40,10 @@ public class NewTaskFragment extends Fragment {
     private String selectedTime = "";
     private int taskIdCounter = 1;
     private TaskRepository taskRepository;
+    private Task taskToEdit = null;
+    private Calendar selectedCalendar = null;
+
+
 
     @Nullable
     @Override
@@ -51,10 +56,43 @@ public class NewTaskFragment extends Fragment {
 
         taskRepository = TaskRepository.getInstance(requireContext());
 
+        checkTask();
 
         setupSpinner();
         setupListeners();
         return root;
+    }
+
+    private void checkTask() {
+        if (getArguments() != null && getArguments().containsKey("task_to_edit")) {
+            taskToEdit = (Task) getArguments().getSerializable("task_to_edit");
+            populateFieldsForEdit();
+            binding.titleMain.setText("Editar tarea"); // Cambia el título
+            binding.saveTaskButton.setText("Guardar cambios");
+        }
+    }
+    private void populateFieldsForEdit() {
+        binding.titleInput.setText(taskToEdit.getTitle());
+        binding.descriptionInput.setText(taskToEdit.getDescription());
+
+        // Prioridad
+        switch (taskToEdit.getPriority()) {
+            case HIGH: binding.priorityHigh.setChecked(true); break;
+            case MEDIUM: binding.priorityMedium.setChecked(true); break;
+            case LOW: binding.priorityLow.setChecked(true); break;
+            default: break;
+        }
+
+        // Categoría (si el orden del enum coincide con el spinner)
+        binding.categorySpinner.setSelection(taskToEdit.getCategory().ordinal());
+
+        // Fecha y hora
+        selectedCalendar = Calendar.getInstance();
+        selectedCalendar.setTime(taskToEdit.getDueDate());
+        selectedDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectedCalendar.getTime());
+        selectedTime = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectedCalendar.getTime());
+        binding.selectDateTimeButton.setText(selectedDate + " " + selectedTime);
+
     }
     private void setupSpinner() {
         Category[] categories = Category.values();
@@ -71,60 +109,74 @@ public class NewTaskFragment extends Fragment {
         );
         binding.categorySpinner.setAdapter(adapter);
     }
-
     private void setupListeners() {
         binding.selectDateTimeButton.setOnClickListener(v -> showDateTimePicker());
         binding.saveTaskButton.setOnClickListener(v -> saveTask());
     }
-
-    //Popuesta para no dejar seleccionar fechas anteriores a las del dia actual
     private void showDateTimePicker() {
-        // Obtener la fecha actual
-        Calendar today = Calendar.getInstance();
+        Calendar now = Calendar.getInstance();
 
-        // Crear selector de fecha (MaterialDatePicker) con restricción de fechas pasadas
+        now.set(Calendar.HOUR_OF_DAY, 0);
+        now.set(Calendar.MINUTE, 0);
+        now.set(Calendar.SECOND, 0);
+        now.set(Calendar.MILLISECOND, 0);
+
+        long todayStartMillis = now.getTimeInMillis();
+
         MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Selecciona una fecha")
-                .setSelection(today.getTimeInMillis()) // Fecha seleccionada por defecto
+                .setSelection(now.getTimeInMillis())
                 .setCalendarConstraints(
                         new CalendarConstraints.Builder()
-                                .setStart(today.getTimeInMillis()) // Fecha mínima: hoy
+                                .setStart(todayStartMillis)
                                 .build()
                 )
                 .build();
 
         datePicker.addOnPositiveButtonClickListener(selection -> {
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(selection);
+            // Crea un Calendar en UTC, pon la fecha seleccionada
+            Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            utcCalendar.setTimeInMillis(selection);
 
-            selectedDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.getTime());
+            Calendar localCalendar = Calendar.getInstance();
+            localCalendar.set(Calendar.YEAR, utcCalendar.get(Calendar.YEAR));
+            localCalendar.set(Calendar.MONTH, utcCalendar.get(Calendar.MONTH));
+            localCalendar.set(Calendar.DAY_OF_MONTH, utcCalendar.get(Calendar.DAY_OF_MONTH));
 
-            // Luego mostramos el TimePicker
+            localCalendar.set(Calendar.HOUR_OF_DAY, 0);
+            localCalendar.set(Calendar.MINUTE, 0);
+            localCalendar.set(Calendar.SECOND, 0);
+            localCalendar.set(Calendar.MILLISECOND, 0);
+
+            selectedCalendar = localCalendar;
+
             MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
                     .setTitleText("Selecciona una hora")
                     .setTimeFormat(TimeFormat.CLOCK_24H)
-                    .setHour(calendar.get(Calendar.HOUR_OF_DAY))
-                    .setMinute(calendar.get(Calendar.MINUTE))
+                    .setHour(localCalendar.get(Calendar.HOUR_OF_DAY))
+                    .setMinute(localCalendar.get(Calendar.MINUTE))
+                    .setInputMode(MaterialTimePicker.INPUT_MODE_KEYBOARD)
                     .build();
 
             timePicker.addOnPositiveButtonClickListener(v -> {
-                calendar.set(Calendar.HOUR_OF_DAY, timePicker.getHour());
-                calendar.set(Calendar.MINUTE, timePicker.getMinute());
+                selectedCalendar.set(Calendar.HOUR_OF_DAY, timePicker.getHour());
+                selectedCalendar.set(Calendar.MINUTE, timePicker.getMinute());
+                selectedCalendar.set(Calendar.SECOND, 0);
 
-                selectedTime = String.format(Locale.getDefault(), "%02d:%02d", timePicker.getHour(), timePicker.getMinute());
+                SimpleDateFormat df = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                SimpleDateFormat tf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                selectedDate = df.format(selectedCalendar.getTime());
+                selectedTime = tf.format(selectedCalendar.getTime());
 
-                // Mostrar en el botón combinado
                 binding.selectDateTimeButton.setText(selectedDate + " " + selectedTime);
             });
 
             timePicker.show(getParentFragmentManager(), "TIME_PICKER");
         });
 
+
         datePicker.show(getParentFragmentManager(), "DATE_PICKER");
     }
-
-    //Hace una segunda validacion para que la fecha no sea anterior a la de hoy
-    //Se implementa el pop up
     private void saveTask() {
         String title = binding.titleInput.getText().toString().trim();
         String description = binding.descriptionInput.getText().toString().trim();
@@ -135,10 +187,12 @@ public class NewTaskFragment extends Fragment {
             return;
         }
 
-        Date dueDate = parseDateTime(selectedDate, selectedTime);
+        Date dueDate = getSelectedDueDate();
+        if (dueDate == null) {
+            Toast.makeText(requireContext(), "Selecciona fecha y hora", Toast.LENGTH_SHORT).show();
+            return;
+        }
         Date today = Calendar.getInstance().getTime();
-
-        // Validar que la fecha seleccionada no sea anterior a hoy
         if (dueDate.before(today)) {
             Toast.makeText(requireContext(), "La fecha seleccionada no puede ser anterior a hoy", Toast.LENGTH_SHORT).show();
             return;
@@ -158,62 +212,69 @@ public class NewTaskFragment extends Fragment {
 
         Category category = Category.values()[binding.categorySpinner.getSelectedItemPosition()];
 
-        //logica de popup de confirmacion
         new android.app.AlertDialog.Builder(requireContext())
                 .setTitle("Confirmar")
                 .setMessage("¿Seguro de guardar tarea?")
+
                 .setPositiveButton("Sí", (dialog, which) -> {
-                    // Confirmación: guardar la tarea
                     saveTaskToRepository(title, description, dueDate, priority, category);
+                    scheduleTaskAlarm(requireContext(), title, dueDate.getTime());
+                    requireActivity().onBackPressed();
                 })
-                .setNegativeButton("No", (dialog, which) -> {
-                    // Cancelación: cerrar el diálogo
-                    dialog.dismiss();
-                })
+                .setNegativeButton("No", (dialog, which) -> dialog.dismiss())
                 .show();
     }
     private void saveTaskToRepository(String title, String description, Date dueDate, Priority priority, Category category) {
-        // Carga la lista actual desde repositorio
         List<Task> currentTasks = taskRepository.getTasks();
 
-        // Opcional: actualizar el contador de id con base en la lista (para evitar ids repetidos)
-        if (!currentTasks.isEmpty()) {
+        if (taskToEdit != null) {
+            // Modo editar: actualiza la tarea existente
+            Task updatedTask = new Task(
+                    taskToEdit.getId(),  // MISMO id!
+                    title,
+                    description,
+                    priority,
+                    dueDate,
+                    category,
+                    taskToEdit.isCompleted() // Mantén el estado completado
+            );
+
+            // Actualiza la lista
+            for (int i = 0; i < currentTasks.size(); i++) {
+                if (currentTasks.get(i).getId() == taskToEdit.getId()) {
+                    currentTasks.set(i, updatedTask);
+                    break;
+                }
+            }
+            taskRepository.saveTasks(currentTasks);
+
+            Toast.makeText(requireContext(), "Tarea editada con éxito", Toast.LENGTH_SHORT).show();
+
+        } else {
+            // Modo crear: igual que antes
             int maxId = 0;
             for (Task t : currentTasks) {
                 if (t.getId() > maxId) maxId = t.getId();
             }
             taskIdCounter = maxId + 1;
+
+            Task task = new Task(
+                    taskIdCounter++,
+                    title,
+                    description,
+                    priority,
+                    dueDate,
+                    category,
+                    false
+            );
+
+            currentTasks.add(task);
+            taskRepository.saveTasks(currentTasks);
+
+            Toast.makeText(requireContext(), "Tarea guardada con éxito", Toast.LENGTH_SHORT).show();
         }
-
-        Task task = new Task(
-                taskIdCounter++,
-                title,
-                description,
-                priority,
-                dueDate,
-                category,
-                false
-        );
-
-        currentTasks.add(task);
-
-        // Guardar lista actualizada en repositorio
-        taskRepository.saveTasks(currentTasks);
-
-        Toast.makeText(requireContext(), "Tarea guardada con éxito", Toast.LENGTH_SHORT).show();
 
         clearFields();
-    }
-
-
-    private Date parseDateTime(String date, String time) {
-        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-        try {
-            return format.parse(date + " " + time);
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return new Date();
-        }
     }
     private void clearFields() {
         binding.titleInput.getText().clear();
@@ -230,4 +291,47 @@ public class NewTaskFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
+    private Date getSelectedDueDate() {
+        if (selectedCalendar != null) {
+            return selectedCalendar.getTime();
+        }
+        return null;
+    }
+
+    public static void scheduleTaskAlarm(Context context, String taskTitle, long dueTimeMillis) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
+        // Para Android 12+ verifica permiso antes de agendar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Toast.makeText(context, "Activa el permiso de alarmas exactas en Configuración", Toast.LENGTH_LONG).show();
+                Intent intentSettings = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                context.startActivity(intentSettings);
+                return;
+            }
+        }
+
+        Intent intent = new Intent(context, TaskAlarmReceiver.class);
+        intent.putExtra("task_title", taskTitle);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                context, taskTitle.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    dueTimeMillis,
+                    pendingIntent
+            );
+        } else {
+            alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    dueTimeMillis,
+                    pendingIntent
+            );
+        }
+    }
+
+
 }

@@ -25,7 +25,6 @@ public class TaskRepository {
 
     private List<Task> taskList;
 
-    // 🔒 Constructor privado
     private TaskRepository(Context context) {
         this.sharedPreferences = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         this.gson = new Gson();
@@ -33,7 +32,6 @@ public class TaskRepository {
         loadTasks();
     }
 
-    // ✅ Singleton thread-safe
     public static synchronized TaskRepository getInstance(Context context) {
         if (instance == null) {
             instance = new TaskRepository(context);

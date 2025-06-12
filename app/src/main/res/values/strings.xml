@@ -31,7 +31,7 @@
     <string name="category">Categoría</string>
     <string name="title_task">Título de la tarea</string>
     <string name="description_task">Descripción corta de la tarea</string>
-    <string name="expiration_task">Fecha de vencimiento: 10/03/2024</string>
+    <string name="expiration_task">Vencimiento: 10/03/2024</string>
     <string name="priotiyy_task">Prioridad: Alta</string>
     <string name="priority_new_task">Prioridad</string>
     <string name="priority_new_task_high">Alta</string>

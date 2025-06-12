@@ -13,6 +13,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import java.util.Collections;
+import java.util.Comparator;
 
 import com.example.to_do.MainActivity;
 import com.example.to_do.R;
@@ -23,6 +25,7 @@ import com.example.to_do.ui.home.adapter.TaskAdapter;
 import com.example.to_do.ui.newtask.model.TaskRepository;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
@@ -49,6 +52,8 @@ public class HomeFragment extends Fragment {
         taskAdapter = new TaskAdapter(this);
         binding.recyclerViewTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerViewTasks.setAdapter(taskAdapter);
+
+
 
         showFilteredTasks();
     }
@@ -97,6 +102,27 @@ public class HomeFragment extends Fragment {
                 break;
         }
 
+        Collections.sort(filteredTasks, new Comparator<Task>() {
+            @Override
+            public int compare(Task t1, Task t2) {
+                // 1. Las tareas completadas siempre van al final
+                if (t1.isCompleted() && !t2.isCompleted()) return 1;
+                if (!t1.isCompleted() && t2.isCompleted()) return -1;
+
+                // 2. Entre las no completadas, las vencidas van primero
+                boolean t1Vencida = t1.getDueDate().before(new Date()) && !t1.isCompleted();
+                boolean t2Vencida = t2.getDueDate().before(new Date()) && !t2.isCompleted();
+                if (t1Vencida && !t2Vencida) return -1;
+                if (!t1Vencida && t2Vencida) return 1;
+
+                // 3. Luego por prioridad
+                int priorityCompare = t2.getPriority().ordinal() - t1.getPriority().ordinal();
+                if (priorityCompare != 0) return priorityCompare;
+
+                // 4. Finalmente por fecha
+                return t1.getDueDate().compareTo(t2.getDueDate());
+            }
+        });
         taskAdapter.submitList(filteredTasks);
 
         if (filteredTasks.isEmpty()) {

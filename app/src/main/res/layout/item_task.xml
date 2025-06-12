@@ -52,15 +52,22 @@
                 android:textSize="14sp"
                 android:maxLines="2"
                 android:ellipsize="end"/>
-
-            <TextView
-                style="@style/TextNormal"
-                android:id="@+id/taskDueDate"
+            
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/expiration_task"
-                android:textSize="14sp"
-                android:textColor="#757575"/>
+                android:layout_height="wrap_content">
+
+                <TextView
+                    style="@style/TextNormal"
+                    android:id="@+id/taskDueDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/expiration_task"
+                    android:textSize="14sp"
+                    android:textColor="#757575"/>
+
+            </LinearLayout>
+
 
             <TextView
                 style="@style/TextTitle"

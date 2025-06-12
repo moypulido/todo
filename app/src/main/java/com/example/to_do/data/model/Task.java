@@ -1,10 +1,11 @@
 package com.example.to_do.data.model;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 
-public class Task {
-    private int id;
+public class Task implements Serializable {
+private int id;
     private String title;
     private String description;
     private Priority priority;
@@ -114,6 +115,5 @@ public class Task {
                 ", isCompleted=" + isCompleted +
                 '}';
     }
-
 }
 
